@@ -9,3 +9,91 @@ generator client {
 datasource db {
   provider = "sqlite"
 }
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  PRIVATE
+}
+
+model UserInformation {
+  id            String     @id @default(cuid())
+  supabaseId    String     @unique
+  userName      String
+  thumbnailKey  String?    @map("thumnail_key")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  bookmarks     Bookmark[]
+  categories    Category[]
+  tags          Tag[]
+
+  @@map("user_information")
+}
+
+model Bookmark {
+  id            String        @id @default(cuid())
+  userId        String
+  url           String
+  comment       String?
+  isFavorite    Boolean       @default(false) @map("is_favorite")
+  publishStatus PublishStatus @default(DRAFT) @map("publish_status")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  user          UserInformation @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postCategories PostCategory[]
+  postTags      PostTag[]
+
+  @@map("bookmark")
+}
+
+model PostCategory {
+  id          String   @id @default(cuid())
+  bookmarkId  String
+  categoryId  String
+
+  bookmark    Bookmark @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([bookmarkId, categoryId])
+  @@map("post_category")
+}
+
+model Category {
+  id            String     @id @default(cuid())
+  name          String
+  userId        String
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  user          UserInformation @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postCategories PostCategory[]
+
+  @@map("category")
+}
+
+model PostTag {
+  id          String   @id @default(cuid())
+  bookmarkId  String
+  tagId       String
+
+  bookmark    Bookmark @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
+  tag         Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([bookmarkId, tagId])
+  @@map("post_tag")
+}
+
+model Tag {
+  id        String     @id @default(cuid())
+  name      String
+  userId    String
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  user      UserInformation @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postTags  PostTag[]
+
+  @@map("tag")
+}

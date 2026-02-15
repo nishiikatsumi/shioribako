@@ -32,11 +32,6 @@ export default function SigninPage() {
               placeholder="パスワード"
               className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm outline-none focus:border-accent"
             />
-            <input
-              type="password"
-              placeholder="パスワード（確認）"
-              className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm outline-none focus:border-accent"
-            />
             <button
               type="submit"
               className="w-full rounded-lg bg-accent py-3 text-sm font-medium text-white hover:opacity-90 transition-opacity"

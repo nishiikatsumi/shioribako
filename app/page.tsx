@@ -66,7 +66,7 @@ const featuredArticles = [
 
 const navItems = [
   { label: "ホーム", href: "/" },
-  { label: "探す", href: "/explore" },
+  { label: "探す", href: "/search" },
   { label: "公開", href: "/public" },
   { label: "プライベート", href: "/private" },
   { label: "アカウント", href: "/account" },

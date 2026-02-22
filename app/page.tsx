@@ -64,15 +64,6 @@ const featuredArticles = [
   },
 ];
 
-const navItems = [
-  { label: "ホーム", href: "/" },
-  { label: "探す", href: "/search" },
-  { label: "公開", href: "/public" },
-  { label: "プライベート", href: "/private" },
-  { label: "アカウント", href: "/account" },
-  { label: "サインイン", href: "/signin" },
-];
-
 const footerExploreLinks = [
   { label: "テクノロジー", href: "#" },
   { label: "ライフスタイル", href: "#" },
@@ -89,26 +80,6 @@ const footerCompanyLinks = [
 export default function Home() {
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-border">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-accent">
-            <span className="text-xl">☺</span>
-            <span>しおり箱</span>
-          </Link>
-          <nav className="flex items-center gap-8">
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="text-sm text-foreground hover:text-accent transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </header>
 
       <main>
         {/* Hero Section */}

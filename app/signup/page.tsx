@@ -1,42 +1,39 @@
+'use client'
+import {supabase} from "@/app/_libs/supabase"
+import {useState} from 'react'
 import Link from "next/link";
 
 export default function SignupPage() {
+	
+	const [email, setEmail] = useState('');
+	const [password, setPassword] = useState('');
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		
+		setIsSubmitting(true);
+		
+		const { error } = await supabase.auth.signUp({
+			email,
+			password,
+			options: {
+				emailRedirectTo: `${window.location.origin}/sign_in`,
+			}
+		});
+		if (error) {
+      alert('登録に失敗しました')
+    } else {
+      setEmail('')
+      setPassword('')
+      alert('確認メールを送信しました。')
+    }
+		setIsSubmitting(false);
+	}
+	
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-8">
-            <span className="text-lg font-bold text-accent">※ しおり箱</span>
-            <nav className="flex items-center gap-6">
-              <Link href="/" className="flex items-center gap-1 text-sm text-foreground hover:text-accent transition-colors">
-                ホーム <span className="text-xs">▾</span>
-              </Link>
-              <Link href="/features" className="flex items-center gap-1 text-sm text-foreground hover:text-accent transition-colors">
-                機能 <span className="text-xs">▾</span>
-              </Link>
-              <Link href="/help" className="flex items-center gap-1 text-sm text-foreground hover:text-accent transition-colors">
-                FAQ <span className="text-xs">▾</span>
-              </Link>
-              <Link href="/contact" className="flex items-center gap-1 text-sm text-foreground hover:text-accent transition-colors">
-                お問い合わせ <span className="text-xs">▾</span>
-              </Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm text-foreground hover:text-accent transition-colors">
-              Log in
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-lg border border-accent bg-white px-4 py-2 text-sm font-medium text-accent hover:bg-accent hover:text-white transition-colors"
-            >
-              Try it free
-            </Link>
-          </div>
-        </div>
-      </header>
-
+        
       {/* Main Content */}
       <main className="flex items-center justify-center px-6 py-24">
         <div className="w-full max-w-md">
@@ -48,15 +45,19 @@ export default function SignupPage() {
           </div>
 
           {/* Form */}
-          <form className="mt-8 flex flex-col gap-4">
+          <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
             <input
               type="email"
               placeholder="メールアドレス"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm outline-none focus:border-accent"
             />
             <input
               type="password"
               placeholder="パスワード"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm outline-none focus:border-accent"
             />
             <input
@@ -66,9 +67,10 @@ export default function SignupPage() {
             />
             <button
               type="submit"
-              className="w-full rounded-lg bg-accent/80 py-3 text-sm font-medium text-white hover:bg-accent transition-colors"
+              disabled={isSubmitting}
+              className="w-full rounded-lg bg-accent/80 py-3 text-sm font-medium text-white hover:bg-accent transition-colors disabled:opacity-50"
             >
-              登録
+              {isSubmitting ? '登録中...' : '登録'}
             </button>
           </form>
 

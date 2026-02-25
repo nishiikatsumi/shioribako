@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/app/_libs/prisma'
+import { getPrisma } from '@/app/_libs/prisma'
 
 export const GET = async (request: NextRequest) => {
   try {
@@ -14,7 +14,7 @@ export const GET = async (request: NextRequest) => {
     }
 
     // supabaseId から UserInformation を取得
-    const userInfo = await prisma.userInformation.findUnique({
+    const userInfo = await getPrisma().userInformation.findUnique({
       where: { supabaseId },
     })
 
@@ -26,7 +26,7 @@ export const GET = async (request: NextRequest) => {
     }
 
     // ユーザー自身のタグを取得
-    const tags = await prisma.tag.findMany({
+    const tags = await getPrisma().tag.findMany({
       where: { userId: userInfo.id },
       orderBy: { createdAt: 'asc' },
     })

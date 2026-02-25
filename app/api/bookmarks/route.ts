@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/app/_libs/prisma'
+import { getPrisma } from '@/app/_libs/prisma'
 import { PublishStatus } from '@/app/generated/prisma/enums'
 
 export const GET = async (request: NextRequest) => {
@@ -12,7 +12,7 @@ export const GET = async (request: NextRequest) => {
     let where = {}
 
     if (supabaseId) {
-      const userInfo = await prisma.userInformation.findUnique({
+      const userInfo = await getPrisma().userInformation.findUnique({
         where: { supabaseId },
       })
 
@@ -28,7 +28,7 @@ export const GET = async (request: NextRequest) => {
       where = { publishStatus: PublishStatus.PUBLISHED }
     }
 
-    const bookmarks = await prisma.bookmark.findMany({
+    const bookmarks = await getPrisma().bookmark.findMany({
       where,
       include: {
         user: true,
@@ -88,7 +88,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     // supabaseId から UserInformation を取得
-    const userInfo = await prisma.userInformation.findUnique({
+    const userInfo = await getPrisma().userInformation.findUnique({
       where: { supabaseId },
     })
 
@@ -100,7 +100,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     // ブックマーク作成
-    const bookmark = await prisma.bookmark.create({
+    const bookmark = await getPrisma().bookmark.create({
       data: {
         userId: userInfo.id,
         url,

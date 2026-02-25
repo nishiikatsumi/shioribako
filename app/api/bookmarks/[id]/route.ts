@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/app/_libs/prisma'
+import { getPrisma } from '@/app/_libs/prisma'
 import { PublishStatus } from '@/app/generated/prisma/enums'
 
 export const GET = async (
@@ -9,7 +9,7 @@ export const GET = async (
   try {
     const { id } = await params
 
-    const bookmark = await prisma.bookmark.findUnique({
+    const bookmark = await getPrisma().bookmark.findUnique({
       where: { id },
       include: {
         user: true,
@@ -77,7 +77,7 @@ export const PUT = async (
     }
 
     // supabaseId から UserInformation を取得
-    const userInfo = await prisma.userInformation.findUnique({
+    const userInfo = await getPrisma().userInformation.findUnique({
       where: { supabaseId },
     })
 
@@ -89,7 +89,7 @@ export const PUT = async (
     }
 
     // 対象ブックマークの存在確認 & 所有者チェック
-    const existing = await prisma.bookmark.findUnique({
+    const existing = await getPrisma().bookmark.findUnique({
       where: { id },
     })
 
@@ -108,7 +108,7 @@ export const PUT = async (
     }
 
     // カテゴリー・タグを一括更新（既存を削除して再作成）
-    const bookmark = await prisma.$transaction(async (tx) => {
+    const bookmark = await getPrisma().$transaction(async (tx) => {
       if (categoryIds !== undefined) {
         await tx.postCategory.deleteMany({ where: { bookmarkId: id } })
       }
@@ -178,7 +178,7 @@ export const DELETE = async (
     }
 
     // supabaseId から UserInformation を取得
-    const userInfo = await prisma.userInformation.findUnique({
+    const userInfo = await getPrisma().userInformation.findUnique({
       where: { supabaseId },
     })
 
@@ -190,7 +190,7 @@ export const DELETE = async (
     }
 
     // 対象ブックマークの存在確認 & 所有者チェック
-    const existing = await prisma.bookmark.findUnique({
+    const existing = await getPrisma().bookmark.findUnique({
       where: { id },
     })
 
@@ -209,7 +209,7 @@ export const DELETE = async (
     }
 
     // ブックマーク削除（PostCategory・PostTag は onDelete: Cascade で自動削除）
-    await prisma.bookmark.delete({ where: { id } })
+    await getPrisma().bookmark.delete({ where: { id } })
 
     return NextResponse.json({ message: 'ブックマークを削除しました' })
   } catch (error) {

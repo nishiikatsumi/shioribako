@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/app/_libs/prisma'
+import { getPrisma } from '@/app/_libs/prisma'
 
 export const GET = async (
   _request: NextRequest,
@@ -8,7 +8,7 @@ export const GET = async (
   try {
     const { id } = await params
 
-    const category = await prisma.category.findUnique({
+    const category = await getPrisma().category.findUnique({
       where: { id },
       include: { user: true },
     })
@@ -48,7 +48,7 @@ export const PUT = async (
     }
 
     // supabaseId から UserInformation を取得
-    const userInfo = await prisma.userInformation.findUnique({
+    const userInfo = await getPrisma().userInformation.findUnique({
       where: { supabaseId },
     })
 
@@ -60,7 +60,7 @@ export const PUT = async (
     }
 
     // 対象カテゴリーの存在確認 & 所有者チェック
-    const existing = await prisma.category.findUnique({
+    const existing = await getPrisma().category.findUnique({
       where: { id },
     })
 
@@ -79,7 +79,7 @@ export const PUT = async (
     }
 
     // 同名カテゴリーの重複チェック（自分自身を除く）
-    const duplicate = await prisma.category.findFirst({
+    const duplicate = await getPrisma().category.findFirst({
       where: { userId: userInfo.id, name, NOT: { id } },
     })
 
@@ -91,7 +91,7 @@ export const PUT = async (
     }
 
     // カテゴリー更新
-    const category = await prisma.category.update({
+    const category = await getPrisma().category.update({
       where: { id },
       data: { name },
       include: { user: true },
@@ -125,7 +125,7 @@ export const DELETE = async (
     }
 
     // supabaseId から UserInformation を取得
-    const userInfo = await prisma.userInformation.findUnique({
+    const userInfo = await getPrisma().userInformation.findUnique({
       where: { supabaseId },
     })
 
@@ -137,7 +137,7 @@ export const DELETE = async (
     }
 
     // 対象カテゴリーの存在確認 & 所有者チェック
-    const existing = await prisma.category.findUnique({
+    const existing = await getPrisma().category.findUnique({
       where: { id },
     })
 
@@ -156,7 +156,7 @@ export const DELETE = async (
     }
 
     // カテゴリー削除（PostCategory は onDelete: Cascade で自動削除）
-    await prisma.category.delete({ where: { id } })
+    await getPrisma().category.delete({ where: { id } })
 
     return NextResponse.json({ message: 'カテゴリーを削除しました' })
   } catch (error) {

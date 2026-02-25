@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/app/_libs/prisma'
+import { getPrisma } from '@/app/_libs/prisma'
 
 export const GET = async (request: NextRequest) => {
   try {
@@ -14,7 +14,7 @@ export const GET = async (request: NextRequest) => {
     }
 
     // supabaseId から UserInformation を取得
-    const userInfo = await prisma.userInformation.findUnique({
+    const userInfo = await getPrisma().userInformation.findUnique({
       where: { supabaseId },
     })
 
@@ -26,7 +26,7 @@ export const GET = async (request: NextRequest) => {
     }
 
     // ユーザー自身のカテゴリーを取得
-    const categories = await prisma.category.findMany({
+    const categories = await getPrisma().category.findMany({
       where: { userId: userInfo.id },
       orderBy: { createdAt: 'asc' },
     })
@@ -55,7 +55,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     // supabaseId から UserInformation を取得
-    const userInfo = await prisma.userInformation.findUnique({
+    const userInfo = await getPrisma().userInformation.findUnique({
       where: { supabaseId },
     })
 
@@ -67,7 +67,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     // 同名カテゴリーの重複チェック
-    const existing = await prisma.category.findFirst({
+    const existing = await getPrisma().category.findFirst({
       where: { userId: userInfo.id, name },
     })
 
@@ -79,7 +79,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     // カテゴリー作成
-    const category = await prisma.category.create({
+    const category = await getPrisma().category.create({
       data: {
         name,
         userId: userInfo.id,

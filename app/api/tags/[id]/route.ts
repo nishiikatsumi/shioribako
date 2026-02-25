@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/app/_libs/prisma'
+import { getPrisma } from '@/app/_libs/prisma'
 
 export const GET = async (
   _request: NextRequest,
@@ -8,7 +8,7 @@ export const GET = async (
   try {
     const { id } = await params
 
-    const tag = await prisma.tag.findUnique({
+    const tag = await getPrisma().tag.findUnique({
       where: { id },
       include: { user: true },
     })
@@ -48,7 +48,7 @@ export const PUT = async (
     }
 
     // supabaseId から UserInformation を取得
-    const userInfo = await prisma.userInformation.findUnique({
+    const userInfo = await getPrisma().userInformation.findUnique({
       where: { supabaseId },
     })
 
@@ -60,7 +60,7 @@ export const PUT = async (
     }
 
     // 対象タグの存在確認 & 所有者チェック
-    const existing = await prisma.tag.findUnique({
+    const existing = await getPrisma().tag.findUnique({
       where: { id },
     })
 
@@ -79,7 +79,7 @@ export const PUT = async (
     }
 
     // 同名タグの重複チェック（自分自身を除く）
-    const duplicate = await prisma.tag.findFirst({
+    const duplicate = await getPrisma().tag.findFirst({
       where: { userId: userInfo.id, name, NOT: { id } },
     })
 
@@ -91,7 +91,7 @@ export const PUT = async (
     }
 
     // タグ更新
-    const tag = await prisma.tag.update({
+    const tag = await getPrisma().tag.update({
       where: { id },
       data: { name },
       include: { user: true },
@@ -125,7 +125,7 @@ export const DELETE = async (
     }
 
     // supabaseId から UserInformation を取得
-    const userInfo = await prisma.userInformation.findUnique({
+    const userInfo = await getPrisma().userInformation.findUnique({
       where: { supabaseId },
     })
 
@@ -137,7 +137,7 @@ export const DELETE = async (
     }
 
     // 対象タグの存在確認 & 所有者チェック
-    const existing = await prisma.tag.findUnique({
+    const existing = await getPrisma().tag.findUnique({
       where: { id },
     })
 
@@ -156,7 +156,7 @@ export const DELETE = async (
     }
 
     // タグ削除（PostTag は onDelete: Cascade で自動削除）
-    await prisma.tag.delete({ where: { id } })
+    await getPrisma().tag.delete({ where: { id } })
 
     return NextResponse.json({ message: 'タグを削除しました' })
   } catch (error) {

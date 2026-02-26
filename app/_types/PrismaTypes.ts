@@ -1,4 +1,4 @@
-import { Bookmark, PublishStatus, UserInformation } from "../generated/prisma/client"
+import type { Bookmark, PublishStatus, UserInformation } from "../generated/prisma/client"
 
 export type UserInformationResponse = {
   id: string

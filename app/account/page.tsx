@@ -2,6 +2,8 @@
 
 import { useState, useRef } from 'react'
 import Image from 'next/image'
+import { supabase } from '@/app/_libs/supabase'
+import { useRouter } from 'next/navigation'
 
 type ToggleRowProps = {
   label: string
@@ -37,12 +39,16 @@ function ToggleRow({ label, description, checked, onChange, highlighted = false 
 }
 
 export default function AccountPage() {
+  const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [userName, setUserName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false)
+  const [isWithdrawing, setIsWithdrawing] = useState(false)
+  const [withdrawError, setWithdrawError] = useState('')
 
   const passwordMismatch = passwordConfirm !== '' && password !== passwordConfirm
   const passwordMatch = passwordConfirm !== '' && password === passwordConfirm
@@ -64,8 +70,37 @@ export default function AccountPage() {
     // TODO: 更新処理
   }
 
-  const handleWithdraw = () => {
-    // TODO: 退会処理
+  const handleWithdraw = async () => {
+    setIsWithdrawing(true)
+    setWithdrawError('')
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setWithdrawError('ログインが必要です')
+        return
+      }
+
+      const res = await fetch('/api/users', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      })
+
+      if (!res.ok) {
+        setWithdrawError('退会処理に失敗しました。もう一度お試しください。')
+        return
+      }
+
+      await supabase.auth.signOut()
+      router.push('/')
+    } catch {
+      setWithdrawError('通信エラーが発生しました。再度お試しください。')
+    } finally {
+      setIsWithdrawing(false)
+    }
   }
 
   return (
@@ -207,14 +242,47 @@ export default function AccountPage() {
           >
             更新
           </button>
-          <button
-            type="button"
-            onClick={handleWithdraw}
-            className="rounded-lg border border-border px-5 py-2 text-sm font-medium text-foreground hover:bg-gray-50 transition-colors"
-          >
-            退会
-          </button>
+          {!showWithdrawConfirm && (
+            <button
+              type="button"
+              onClick={() => setShowWithdrawConfirm(true)}
+              className="rounded-lg border border-border px-5 py-2 text-sm font-medium text-foreground hover:bg-gray-50 transition-colors"
+            >
+              退会
+            </button>
+          )}
         </div>
+
+        {/* 退会確認 */}
+        {showWithdrawConfirm && (
+          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-5">
+            <p className="text-sm font-bold text-red-700">本当に退会しますか？</p>
+            <p className="mt-1 text-xs text-red-600">
+              退会するとすべてのブックマーク・カテゴリ・タグが削除されます。この操作は取り消せません。
+            </p>
+            {withdrawError && (
+              <p className="mt-2 text-xs text-red-700 font-medium">{withdrawError}</p>
+            )}
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={handleWithdraw}
+                disabled={isWithdrawing}
+                className="rounded-lg bg-red-600 px-5 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {isWithdrawing ? '処理中...' : '退会する'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowWithdrawConfirm(false); setWithdrawError('') }}
+                disabled={isWithdrawing}
+                className="rounded-lg border border-border px-5 py-2 text-sm font-medium text-foreground hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        )}
 
       </main>
     </div>

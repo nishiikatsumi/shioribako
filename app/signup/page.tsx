@@ -4,36 +4,91 @@ import {useState} from 'react'
 import Link from "next/link";
 
 export default function SignupPage() {
-	
+
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
+	const [confirmPassword, setConfirmPassword] = useState('');
+	const [agreed, setAgreed] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	
+	const [error, setError] = useState('');
+	const [success, setSuccess] = useState('');
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		
+		setError('');
+		setSuccess('');
+
+		if (password.length < 6) {
+			setError('パスワードは6文字以上で入力してください');
+			return;
+		}
+
+		if (password !== confirmPassword) {
+			setError('パスワードが一致しません');
+			return;
+		}
+
+		if (!agreed) {
+			setError('利用規約とプライバシーポリシーに同意してください');
+			return;
+		}
+
 		setIsSubmitting(true);
-		
-		const { error } = await supabase.auth.signUp({
-			email,
-			password,
-			options: {
-				emailRedirectTo: `${window.location.origin}/sign_in`,
+
+		try {
+			const { data, error: signUpError } = await supabase.auth.signUp({
+				email,
+				password,
+				options: {
+					emailRedirectTo: `${window.location.origin}/signin`,
+				}
+			});
+
+			if (signUpError) {
+				setError('登録に失敗しました: ' + signUpError.message);
+				return;
 			}
-		});
-		if (error) {
-      alert('登録に失敗しました')
-    } else {
-      setEmail('')
-      setPassword('')
-      alert('確認メールを送信しました。')
-    }
-		setIsSubmitting(false);
+
+			if (data.user && data.session) {
+				const userName = email.split('@')[0];
+				const res = await fetch('/api/users', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${data.session.access_token}`,
+					},
+					body: JSON.stringify({ userName }),
+				});
+
+				if (!res.ok) {
+					setError('ユーザー情報の登録に失敗しました。もう一度お試しください。');
+					return;
+				}
+
+				setEmail('');
+				setPassword('');
+				setConfirmPassword('');
+				setAgreed(false);
+				setSuccess('確認メールを送信しました。メールをご確認の上、アカウントを有効化してください。');
+			} else if (data.user) {
+				// メール確認が必要な場合、session が null になる
+				// この場合 DB へのユーザー作成は初回ログイン時に行う
+				setEmail('');
+				setPassword('');
+				setConfirmPassword('');
+				setAgreed(false);
+				setSuccess('確認メールを送信しました。メールをご確認の上、アカウントを有効化してください。');
+			}
+		} catch {
+			setError('通信エラーが発生しました。再度お試しください。');
+		} finally {
+			setIsSubmitting(false);
+		}
 	}
-	
+
   return (
     <div className="min-h-screen bg-gray-50">
-        
+
       {/* Main Content */}
       <main className="flex items-center justify-center px-6 py-24">
         <div className="w-full max-w-md">
@@ -44,6 +99,20 @@ export default function SignupPage() {
             </p>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <div className="mt-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+              {success}
+            </div>
+          )}
+
           {/* Form */}
           <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
             <input
@@ -51,6 +120,7 @@ export default function SignupPage() {
               placeholder="メールアドレス"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
               className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm outline-none focus:border-accent"
             />
             <input
@@ -58,11 +128,15 @@ export default function SignupPage() {
               placeholder="パスワード"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
               className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm outline-none focus:border-accent"
             />
             <input
               type="password"
               placeholder="パスワード（確認）"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
               className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm outline-none focus:border-accent"
             />
             <button
@@ -106,7 +180,13 @@ export default function SignupPage() {
 
           {/* Agreement Checkbox */}
           <div className="mt-6 flex items-center justify-center gap-2">
-            <input type="checkbox" id="agree" className="h-4 w-4 rounded border-border" />
+            <input
+              type="checkbox"
+              id="agree"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
             <label htmlFor="agree" className="text-xs text-muted">
               利用規約とプライバシーポリシーに同意します
             </label>

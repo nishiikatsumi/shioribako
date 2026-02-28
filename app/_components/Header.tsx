@@ -2,8 +2,12 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
+import { supabase } from '@/app/_libs/supabase'
+import { useRouter } from 'next/navigation'
 
 export default function Header() {
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -17,6 +21,12 @@ export default function Header() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const handleSignOut = async () => {
+    setIsOpen(false)
+    await supabase.auth.signOut()
+    router.push('/')
+  }
 
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-white shadow">
@@ -42,18 +52,25 @@ export default function Header() {
                 { label: 'アカウント', href: '/account' },
                 { label: 'お問い合わせ', href: '/contact' },
                 { label: 'サインイン', href: '/signin' },
-                { label: 'サインアウト', href: '/' },
               ].map((item) => (
                 <li key={item.href}>
-                  <a
+                  <Link
                     href={item.href}
                     className="block px-4 py-2 text-gray-700 hover:bg-gray-100 transition"
                     onClick={() => setIsOpen(false)}
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
+              <li>
+                <button
+                  onClick={handleSignOut}
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition"
+                >
+                  サインアウト
+                </button>
+              </li>
             </ul>
           </div>
         )}

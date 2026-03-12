@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/app/_libs/prisma'
+import { getAuthenticatedUser, unauthorizedResponse, validateName } from '@/app/_libs/auth'
 
 export const GET = async (request: NextRequest) => {
   try {
-    const { searchParams } = new URL(request.url)
-    const supabaseId = searchParams.get('supabaseId')
+    // 認証チェック
+    const user = await getAuthenticatedUser(request)
+    if (!user) return unauthorizedResponse()
 
-    if (!supabaseId) {
-      return NextResponse.json(
-        { error: 'supabaseId は必須です' },
-        { status: 400 }
-      )
-    }
-
-    // supabaseId から UserInformation を取得
+    // トークンからユーザーを取得
     const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId },
+      where: { supabaseId: user.id },
     })
 
     if (!userInfo) {
@@ -25,7 +20,6 @@ export const GET = async (request: NextRequest) => {
       )
     }
 
-    // ユーザー自身のカテゴリーを取得
     const categories = await getPrisma().category.findMany({
       where: { userId: userInfo.id },
       orderBy: { createdAt: 'asc' },
@@ -43,20 +37,22 @@ export const GET = async (request: NextRequest) => {
 
 export const POST = async (request: NextRequest) => {
   try {
+    // 認証チェック
+    const user = await getAuthenticatedUser(request)
+    if (!user) return unauthorizedResponse()
+
     const body = await request.json()
-    const { supabaseId, name }: { supabaseId: string; name: string } = body
+    const { name }: { name: string } = body
 
     // バリデーション
-    if (!supabaseId || !name) {
-      return NextResponse.json(
-        { error: 'supabaseId と name は必須です' },
-        { status: 400 }
-      )
+    const nameError = validateName(name)
+    if (nameError) {
+      return NextResponse.json({ error: nameError }, { status: 400 })
     }
 
-    // supabaseId から UserInformation を取得
+    // トークンからユーザーを取得
     const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId },
+      where: { supabaseId: user.id },
     })
 
     if (!userInfo) {
@@ -78,7 +74,6 @@ export const POST = async (request: NextRequest) => {
       )
     }
 
-    // カテゴリー作成
     const category = await getPrisma().category.create({
       data: {
         name,

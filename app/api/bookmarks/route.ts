@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/app/_libs/prisma'
 import { PublishStatus } from '@/app/generated/prisma/enums'
+import { getAuthenticatedUser, unauthorizedResponse, validateBookmarkUrl, validateComment } from '@/app/_libs/auth'
 
 export const GET = async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const supabaseId = searchParams.get('supabaseId')
 
-    // supabaseId が指定された場合：該当ユーザーの全ブックマークを取得
-    // 指定がない場合：全ユーザーの PUBLISHED ブックマークを取得
-    let where = {}
-
     if (supabaseId) {
+      // マイブックマーク取得: 認証必須 & トークンのユーザーと一致確認
+      const user = await getAuthenticatedUser(request)
+      if (!user) return unauthorizedResponse()
+
+      if (user.id !== supabaseId) {
+        return NextResponse.json(
+          { error: '他のユーザーのブックマークにはアクセスできません' },
+          { status: 403 }
+        )
+      }
+
       const userInfo = await getPrisma().userInformation.findUnique({
         where: { supabaseId },
       })
@@ -23,29 +31,28 @@ export const GET = async (request: NextRequest) => {
         )
       }
 
-      where = { userId: userInfo.id }
-    } else {
-      where = { publishStatus: PublishStatus.PUBLISHED }
+      const bookmarks = await getPrisma().bookmark.findMany({
+        where: { userId: userInfo.id },
+        include: {
+          user: true,
+          postCategories: { include: { category: true } },
+          postTags: { include: { tag: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+
+      return NextResponse.json({ bookmarks })
     }
 
+    // 公開ブックマーク取得: 認証不要
     const bookmarks = await getPrisma().bookmark.findMany({
-      where,
+      where: { publishStatus: PublishStatus.PUBLISHED },
       include: {
         user: true,
-        postCategories: {
-          include: {
-            category: true,
-          },
-        },
-        postTags: {
-          include: {
-            tag: true,
-          },
-        },
+        postCategories: { include: { category: true } },
+        postTags: { include: { tag: true } },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     })
 
     return NextResponse.json({ bookmarks })
@@ -60,9 +67,12 @@ export const GET = async (request: NextRequest) => {
 
 export const POST = async (request: NextRequest) => {
   try {
+    // 認証チェック
+    const user = await getAuthenticatedUser(request)
+    if (!user) return unauthorizedResponse()
+
     const body = await request.json()
     const {
-      supabaseId,
       url,
       comment,
       isFavorite = false,
@@ -70,7 +80,6 @@ export const POST = async (request: NextRequest) => {
       categoryIds = [],
       tagIds = [],
     }: {
-      supabaseId: string
       url: string
       comment?: string
       isFavorite?: boolean
@@ -79,17 +88,21 @@ export const POST = async (request: NextRequest) => {
       tagIds?: string[]
     } = body
 
-    // バリデーション
-    if (!supabaseId || !url) {
-      return NextResponse.json(
-        { error: 'supabaseId と url は必須です' },
-        { status: 400 }
-      )
+    // URL バリデーション
+    const urlError = validateBookmarkUrl(url)
+    if (urlError) {
+      return NextResponse.json({ error: urlError }, { status: 400 })
     }
 
-    // supabaseId から UserInformation を取得
+    // コメントバリデーション
+    const commentError = validateComment(comment)
+    if (commentError) {
+      return NextResponse.json({ error: commentError }, { status: 400 })
+    }
+
+    // トークンの supabaseId からユーザーを取得（リクエストボディを信頼しない）
     const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId },
+      where: { supabaseId: user.id },
     })
 
     if (!userInfo) {
@@ -99,7 +112,6 @@ export const POST = async (request: NextRequest) => {
       )
     }
 
-    // ブックマーク作成
     const bookmark = await getPrisma().bookmark.create({
       data: {
         userId: userInfo.id,
@@ -116,16 +128,8 @@ export const POST = async (request: NextRequest) => {
       },
       include: {
         user: true,
-        postCategories: {
-          include: {
-            category: true,
-          },
-        },
-        postTags: {
-          include: {
-            tag: true,
-          },
-        },
+        postCategories: { include: { category: true } },
+        postTags: { include: { tag: true } },
       },
     })
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/app/_libs/supabase'
+import { fetchWithAuth } from '@/app/_libs/fetchWithAuth'
 import BookmarkShowForm, { Bookmark } from '@/app/_components/BookmarkShowForm'
 
 export default function BookmarksPage() {
@@ -17,7 +18,7 @@ export default function BookmarksPage() {
           return
         }
 
-        const res = await fetch(`/api/bookmarks?supabaseId=${user.id}`)
+        const res = await fetchWithAuth(`/api/bookmarks?supabaseId=${user.id}`)
         if (!res.ok) return
         const data = await res.json()
         setBookmarks(data.bookmarks)

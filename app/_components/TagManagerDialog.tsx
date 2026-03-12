@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/app/_libs/supabase'
+import { fetchWithAuth } from '@/app/_libs/fetchWithAuth'
 import { Tag } from './BookmarkShowForm'
 
 // ─── Props ──────────────────────────────────────────────────────────────────
@@ -90,7 +91,7 @@ export default function TagManagerDialog({
           return
         }
         setSupabaseId(user.id)
-        const res = await fetch(`/api/tags?supabaseId=${user.id}`)
+        const res = await fetchWithAuth('/api/tags')
         if (!res.ok) return
         const data = await res.json()
         setTags(data.tags)
@@ -127,10 +128,10 @@ export default function TagManagerDialog({
     setError(null)
     setIsAdding(true)
     try {
-      const res = await fetch('/api/tags', {
+      const res = await fetchWithAuth('/api/tags', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ supabaseId, name: newName.trim() }),
+        body: JSON.stringify({ name: newName.trim() }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
@@ -152,10 +153,10 @@ export default function TagManagerDialog({
     setError(null)
     setIsUpdating(true)
     try {
-      const res = await fetch(`/api/tags/${id}`, {
+      const res = await fetchWithAuth(`/api/tags/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ supabaseId, name: editingName.trim() }),
+        body: JSON.stringify({ name: editingName.trim() }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
@@ -180,10 +181,8 @@ export default function TagManagerDialog({
     setIsDeleting(true)
     try {
       const deletedName = tags.find(t => t.id === id)?.name ?? ''
-      const res = await fetch(`/api/tags/${id}`, {
+      const res = await fetchWithAuth(`/api/tags/${id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ supabaseId }),
       })
       if (!res.ok) {
         const data = await res.json()

@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/app/_libs/prisma'
+import { getAuthenticatedUser, unauthorizedResponse, validateName } from '@/app/_libs/auth'
 
 export const GET = async (request: NextRequest) => {
   try {
-    const { searchParams } = new URL(request.url)
-    const supabaseId = searchParams.get('supabaseId')
+    // 認証チェック
+    const user = await getAuthenticatedUser(request)
+    if (!user) return unauthorizedResponse()
 
-    if (!supabaseId) {
-      return NextResponse.json(
-        { error: 'supabaseId は必須です' },
-        { status: 400 }
-      )
-    }
-
-    // supabaseId から UserInformation を取得
+    // トークンからユーザーを取得
     const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId },
+      where: { supabaseId: user.id },
     })
 
     if (!userInfo) {
@@ -25,7 +20,6 @@ export const GET = async (request: NextRequest) => {
       )
     }
 
-    // ユーザー自身のタグを取得
     const tags = await getPrisma().tag.findMany({
       where: { userId: userInfo.id },
       orderBy: { createdAt: 'asc' },
@@ -36,6 +30,62 @@ export const GET = async (request: NextRequest) => {
     console.error('[GET /api/tags]', error)
     return NextResponse.json(
       { error: 'タグの取得に失敗しました' },
+      { status: 500 }
+    )
+  }
+}
+
+export const POST = async (request: NextRequest) => {
+  try {
+    // 認証チェック
+    const user = await getAuthenticatedUser(request)
+    if (!user) return unauthorizedResponse()
+
+    const body = await request.json()
+    const { name }: { name: string } = body
+
+    // バリデーション
+    const nameError = validateName(name)
+    if (nameError) {
+      return NextResponse.json({ error: nameError }, { status: 400 })
+    }
+
+    // トークンからユーザーを取得
+    const userInfo = await getPrisma().userInformation.findUnique({
+      where: { supabaseId: user.id },
+    })
+
+    if (!userInfo) {
+      return NextResponse.json(
+        { error: 'ユーザーが見つかりません' },
+        { status: 404 }
+      )
+    }
+
+    // 同名タグの重複チェック
+    const existing = await getPrisma().tag.findFirst({
+      where: { userId: userInfo.id, name },
+    })
+
+    if (existing) {
+      return NextResponse.json(
+        { error: '同じ名前のタグが既に存在します' },
+        { status: 409 }
+      )
+    }
+
+    const tag = await getPrisma().tag.create({
+      data: {
+        name,
+        userId: userInfo.id,
+      },
+    })
+
+    return NextResponse.json({ tag }, { status: 201 })
+  } catch (error) {
+    console.error('[POST /api/tags]', error)
+    return NextResponse.json(
+      { error: 'タグの作成に失敗しました' },
       { status: 500 }
     )
   }

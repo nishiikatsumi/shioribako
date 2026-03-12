@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/app/_libs/prisma'
+import { getAuthenticatedUser, unauthorizedResponse } from '@/app/_libs/auth'
 import { createClient } from '@supabase/supabase-js'
 
 function getSupabaseAdmin() {
@@ -13,27 +14,10 @@ function getSupabaseAdmin() {
   })
 }
 
-// Authorization ヘッダーからトークンを検証し、認証済みユーザーを返す
-async function getAuthenticatedUser(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null
-  }
-  const token = authHeader.slice(7)
-  const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token)
-  if (error || !user) return null
-  return user
-}
-
 export const POST = async (request: NextRequest) => {
   try {
     const user = await getAuthenticatedUser(request)
-    if (!user) {
-      return NextResponse.json(
-        { error: '認証が必要です' },
-        { status: 401 }
-      )
-    }
+    if (!user) return unauthorizedResponse()
 
     const { userName }: { userName: string } = await request.json()
 
@@ -75,12 +59,7 @@ export const POST = async (request: NextRequest) => {
 export const DELETE = async (request: NextRequest) => {
   try {
     const user = await getAuthenticatedUser(request)
-    if (!user) {
-      return NextResponse.json(
-        { error: '認証が必要です' },
-        { status: 401 }
-      )
-    }
+    if (!user) return unauthorizedResponse()
 
     // 認証済みユーザー自身の ID を使用（リクエストボディを信頼しない）
     const supabaseId = user.id

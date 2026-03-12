@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/app/_libs/supabase'
+import { fetchWithAuth } from '@/app/_libs/fetchWithAuth'
 import { Category } from './BookmarkShowForm'
 
 // ─── Props ──────────────────────────────────────────────────────────────────
@@ -80,7 +81,7 @@ export default function CategoryManagerDialog({
           return
         }
         setSupabaseId(user.id)
-        const res = await fetch(`/api/categories?supabaseId=${user.id}`)
+        const res = await fetchWithAuth('/api/categories')
         if (!res.ok) return
         const data = await res.json()
         setCategories(data.categories)
@@ -108,10 +109,10 @@ export default function CategoryManagerDialog({
     setError(null)
     setIsAdding(true)
     try {
-      const res = await fetch('/api/categories', {
+      const res = await fetchWithAuth('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ supabaseId, name: newName.trim() }),
+        body: JSON.stringify({ name: newName.trim() }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
@@ -133,10 +134,10 @@ export default function CategoryManagerDialog({
     setError(null)
     setIsUpdating(true)
     try {
-      const res = await fetch(`/api/categories/${id}`, {
+      const res = await fetchWithAuth(`/api/categories/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ supabaseId, name: editingName.trim() }),
+        body: JSON.stringify({ name: editingName.trim() }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
@@ -161,10 +162,8 @@ export default function CategoryManagerDialog({
     setIsDeleting(true)
     try {
       const deletedName = categories.find(c => c.id === id)?.name ?? ''
-      const res = await fetch(`/api/categories/${id}`, {
+      const res = await fetchWithAuth(`/api/categories/${id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ supabaseId }),
       })
       if (!res.ok) {
         const data = await res.json()

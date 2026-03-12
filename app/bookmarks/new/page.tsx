@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import BookmarkForm, { SupabaseUser, FormValues } from '@/app/_components/BookmarkForm'
 import { supabase } from '@/app/_libs/supabase'
+import { fetchWithAuth } from '@/app/_libs/fetchWithAuth'
 
 export default function BookmarkNewPage() {
   const router = useRouter()
@@ -34,11 +35,10 @@ export default function BookmarkNewPage() {
 
     setIsSubmitting(true)
     try {
-      const res = await fetch('/api/bookmarks', {
+      const res = await fetchWithAuth('/api/bookmarks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          supabaseId: supabaseUser.id,
           url,
           comment,
           isFavorite,

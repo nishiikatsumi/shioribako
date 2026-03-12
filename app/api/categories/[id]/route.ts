@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/app/_libs/prisma'
+import { getAuthenticatedUser, unauthorizedResponse, validateName } from '@/app/_libs/auth'
 
 export const GET = async (
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
     const { id } = await params
+
+    // 認証チェック
+    const user = await getAuthenticatedUser(request)
+    if (!user) return unauthorizedResponse()
 
     const category = await getPrisma().category.findUnique({
       where: { id },
@@ -17,6 +22,18 @@ export const GET = async (
       return NextResponse.json(
         { error: 'カテゴリーが見つかりません' },
         { status: 404 }
+      )
+    }
+
+    // 所有者チェック
+    const userInfo = await getPrisma().userInformation.findUnique({
+      where: { supabaseId: user.id },
+    })
+
+    if (category.userId !== userInfo?.id) {
+      return NextResponse.json(
+        { error: 'このカテゴリーを閲覧する権限がありません' },
+        { status: 403 }
       )
     }
 
@@ -36,20 +53,23 @@ export const PUT = async (
 ) => {
   try {
     const { id } = await params
+
+    // 認証チェック
+    const user = await getAuthenticatedUser(request)
+    if (!user) return unauthorizedResponse()
+
     const body = await request.json()
-    const { supabaseId, name }: { supabaseId: string; name: string } = body
+    const { name }: { name: string } = body
 
     // バリデーション
-    if (!supabaseId || !name) {
-      return NextResponse.json(
-        { error: 'supabaseId と name は必須です' },
-        { status: 400 }
-      )
+    const nameError = validateName(name)
+    if (nameError) {
+      return NextResponse.json({ error: nameError }, { status: 400 })
     }
 
-    // supabaseId から UserInformation を取得
+    // トークンからユーザーを取得
     const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId },
+      where: { supabaseId: user.id },
     })
 
     if (!userInfo) {
@@ -90,7 +110,6 @@ export const PUT = async (
       )
     }
 
-    // カテゴリー更新
     const category = await getPrisma().category.update({
       where: { id },
       data: { name },
@@ -113,20 +132,14 @@ export const DELETE = async (
 ) => {
   try {
     const { id } = await params
-    const body = await request.json()
-    const { supabaseId }: { supabaseId: string } = body
 
-    // バリデーション
-    if (!supabaseId) {
-      return NextResponse.json(
-        { error: 'supabaseId は必須です' },
-        { status: 400 }
-      )
-    }
+    // 認証チェック
+    const user = await getAuthenticatedUser(request)
+    if (!user) return unauthorizedResponse()
 
-    // supabaseId から UserInformation を取得
+    // トークンからユーザーを取得
     const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId },
+      where: { supabaseId: user.id },
     })
 
     if (!userInfo) {
@@ -155,7 +168,6 @@ export const DELETE = async (
       )
     }
 
-    // カテゴリー削除（PostCategory は onDelete: Cascade で自動削除）
     await getPrisma().category.delete({ where: { id } })
 
     return NextResponse.json({ message: 'カテゴリーを削除しました' })

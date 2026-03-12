@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import BookmarkForm, { SupabaseUser, FormValues } from '@/app/_components/BookmarkForm'
 import { supabase } from '@/app/_libs/supabase'
+import { fetchWithAuth } from '@/app/_libs/fetchWithAuth'
 
 type Bookmark = {
   id: string
@@ -36,7 +37,7 @@ export default function BookmarkEditPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) setSupabaseUser({ id: user.id, email: user.email })
 
-        const res = await fetch(`/api/bookmarks/${id}`)
+        const res = await fetchWithAuth(`/api/bookmarks/${id}`)
         if (!res.ok) {
           const data = await res.json()
           throw new Error(data.error ?? 'ブックマークの取得に失敗しました')
@@ -66,11 +67,10 @@ export default function BookmarkEditPage() {
 
     setIsUpdating(true)
     try {
-      const res = await fetch(`/api/bookmarks/${id}`, {
+      const res = await fetchWithAuth(`/api/bookmarks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          supabaseId: supabaseUser.id,
           url,
           comment,
           isFavorite,
@@ -103,10 +103,8 @@ export default function BookmarkEditPage() {
 
     setIsDeleting(true)
     try {
-      const res = await fetch(`/api/bookmarks/${id}`, {
+      const res = await fetchWithAuth(`/api/bookmarks/${id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ supabaseId: supabaseUser.id }),
       })
 
       if (!res.ok) {

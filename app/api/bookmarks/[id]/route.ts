@@ -1,28 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/app/_libs/prisma'
 import { PublishStatus } from '@/app/generated/prisma/enums'
+import { getAuthenticatedUser, unauthorizedResponse, validateBookmarkUrl, validateComment } from '@/app/_libs/auth'
 
 export const GET = async (
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
     const { id } = await params
 
+    // 認証チェック
+    const user = await getAuthenticatedUser(request)
+    if (!user) return unauthorizedResponse()
+
     const bookmark = await getPrisma().bookmark.findUnique({
       where: { id },
       include: {
         user: true,
-        postCategories: {
-          include: {
-            category: true,
-          },
-        },
-        postTags: {
-          include: {
-            tag: true,
-          },
-        },
+        postCategories: { include: { category: true } },
+        postTags: { include: { tag: true } },
       },
     })
 
@@ -30,6 +27,18 @@ export const GET = async (
       return NextResponse.json(
         { error: 'ブックマークが見つかりません' },
         { status: 404 }
+      )
+    }
+
+    // 所有者チェック: 自分のブックマークか、公開ブックマークのみ閲覧可
+    const userInfo = await getPrisma().userInformation.findUnique({
+      where: { supabaseId: user.id },
+    })
+
+    if (bookmark.userId !== userInfo?.id && bookmark.publishStatus !== PublishStatus.PUBLISHED) {
+      return NextResponse.json(
+        { error: 'このブックマークを閲覧する権限がありません' },
+        { status: 403 }
       )
     }
 
@@ -49,9 +58,13 @@ export const PUT = async (
 ) => {
   try {
     const { id } = await params
+
+    // 認証チェック
+    const user = await getAuthenticatedUser(request)
+    if (!user) return unauthorizedResponse()
+
     const body = await request.json()
     const {
-      supabaseId,
       url,
       comment,
       isFavorite,
@@ -59,7 +72,6 @@ export const PUT = async (
       categoryIds,
       tagIds,
     }: {
-      supabaseId: string
       url?: string
       comment?: string
       isFavorite?: boolean
@@ -68,17 +80,23 @@ export const PUT = async (
       tagIds?: string[]
     } = body
 
-    // バリデーション
-    if (!supabaseId) {
-      return NextResponse.json(
-        { error: 'supabaseId は必須です' },
-        { status: 400 }
-      )
+    // URL バリデーション（指定されている場合）
+    if (url !== undefined) {
+      const urlError = validateBookmarkUrl(url)
+      if (urlError) {
+        return NextResponse.json({ error: urlError }, { status: 400 })
+      }
     }
 
-    // supabaseId から UserInformation を取得
+    // コメントバリデーション
+    const commentError = validateComment(comment)
+    if (commentError) {
+      return NextResponse.json({ error: commentError }, { status: 400 })
+    }
+
+    // トークンからユーザーを取得（リクエストボディの supabaseId を信頼しない）
     const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId },
+      where: { supabaseId: user.id },
     })
 
     if (!userInfo) {
@@ -136,16 +154,8 @@ export const PUT = async (
         },
         include: {
           user: true,
-          postCategories: {
-            include: {
-              category: true,
-            },
-          },
-          postTags: {
-            include: {
-              tag: true,
-            },
-          },
+          postCategories: { include: { category: true } },
+          postTags: { include: { tag: true } },
         },
       })
     })
@@ -166,20 +176,14 @@ export const DELETE = async (
 ) => {
   try {
     const { id } = await params
-    const body = await request.json()
-    const { supabaseId }: { supabaseId: string } = body
 
-    // バリデーション
-    if (!supabaseId) {
-      return NextResponse.json(
-        { error: 'supabaseId は必須です' },
-        { status: 400 }
-      )
-    }
+    // 認証チェック
+    const user = await getAuthenticatedUser(request)
+    if (!user) return unauthorizedResponse()
 
-    // supabaseId から UserInformation を取得
+    // トークンからユーザーを取得
     const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId },
+      where: { supabaseId: user.id },
     })
 
     if (!userInfo) {

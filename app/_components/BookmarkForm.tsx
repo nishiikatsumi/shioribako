@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import TiptapEditor from '@/app/_components/TiptapEditor'
 import CategoryManagerDialog from '@/app/_components/CategoryManagerDialog'
 import TagManagerDialog from '@/app/_components/TagManagerDialog'
+import { fetchWithAuth } from '@/app/_libs/fetchWithAuth'
 
 export type SupabaseUser = {
   id: string
@@ -84,6 +85,37 @@ export default function BookmarkForm({
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [categoryMap, setCategoryMap] = useState<Record<string, string>>({})
+  const [tagMap, setTagMap] = useState<Record<string, string>>({})
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth('/api/categories')
+      if (res.ok) {
+        const data = await res.json()
+        const map: Record<string, string> = {}
+        data.categories.forEach((c: { id: string; name: string }) => { map[c.id] = c.name })
+        setCategoryMap(map)
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  const fetchTags = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth('/api/tags')
+      if (res.ok) {
+        const data = await res.json()
+        const map: Record<string, string> = {}
+        data.tags.forEach((t: { id: string; name: string }) => { map[t.id] = t.name })
+        setTagMap(map)
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    fetchCategories()
+    fetchTags()
+  }, [fetchCategories, fetchTags])
 
   const handleSubmit = () => {
     const categoryIds = selectedCategoryId ? [selectedCategoryId] : []
@@ -170,7 +202,13 @@ export default function BookmarkForm({
                   <span className="text-lg">📁</span>
                   <h2 className="text-lg font-bold text-foreground">カテゴリー選択</h2>
                 </div>
-                <p className="text-xs text-muted">ブックマークを分類するカテゴリーを選択してください。</p>
+                {selectedCategoryId && categoryMap[selectedCategoryId] ? (
+                  <span className="inline-block mt-1 rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
+                    {categoryMap[selectedCategoryId]}
+                  </span>
+                ) : (
+                  <p className="text-xs text-muted">ブックマークを分類するカテゴリーを選択してください。</p>
+                )}
               </div>
               <button
                 type="button"
@@ -190,7 +228,17 @@ export default function BookmarkForm({
                   <span className="text-lg">🏷️</span>
                   <h2 className="text-lg font-bold text-foreground">タグ指定</h2>
                 </div>
-                <p className="text-xs text-muted">関連するタグを指定して、ブックマークを整理しましょう。</p>
+                {selectedTagIds.length > 0 && selectedTagIds.some(id => tagMap[id]) ? (
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedTagIds.map(id => tagMap[id] ? (
+                      <span key={id} className="inline-block rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
+                        {tagMap[id]}
+                      </span>
+                    ) : null)}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted">関連するタグを指定して、ブックマークを整理しましょう。</p>
+                )}
               </div>
               <button
                 type="button"
@@ -312,7 +360,7 @@ export default function BookmarkForm({
       {/* カテゴリー管理ダイアログ */}
       <CategoryManagerDialog
         isOpen={isCategoryDialogOpen}
-        onClose={() => setIsCategoryDialogOpen(false)}
+        onClose={() => { setIsCategoryDialogOpen(false); fetchCategories() }}
         selectedCategory={selectedCategoryId}
         onSelectCategory={setSelectedCategoryId}
         fallbackCategories={[]}
@@ -321,7 +369,7 @@ export default function BookmarkForm({
       {/* タグ管理ダイアログ */}
       <TagManagerDialog
         isOpen={isTagDialogOpen}
-        onClose={() => setIsTagDialogOpen(false)}
+        onClose={() => { setIsTagDialogOpen(false); fetchTags() }}
         selectedTags={selectedTagIds}
         onSelectTags={setSelectedTagIds}
         fallbackTags={[]}

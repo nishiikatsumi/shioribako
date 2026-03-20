@@ -45,6 +45,8 @@ interface BookmarkShowFormProps {
   showStatusBadge?: boolean
   pageTitle?: string
   newBookmarkHref?: string
+  /** false にすると新規追加ボタンを非表示にする（publicページ用） */
+  showAddButton?: boolean
 }
 
 // ─── メインコンポーネント ────────────────────────────────────────────────────
@@ -54,6 +56,7 @@ export default function BookmarkShowForm({
   showStatusBadge = false,
   pageTitle = 'ブックマーク一覧',
   newBookmarkHref = '/bookmarks/new',
+  showAddButton = true,
 }: BookmarkShowFormProps) {
   const [selectedCategory, setSelectedCategory] = useState('')
   // タグは複数選択対応
@@ -111,14 +114,16 @@ export default function BookmarkShowForm({
         </h1>
 
         {/* 新規追加ボタン */}
-        <div className="flex justify-center mb-6">
-          <Link
-            href={newBookmarkHref}
-            className="inline-block rounded bg-accent px-8 py-2.5 text-sm font-bold text-white hover:opacity-90 transition-opacity"
-          >
-            ブックマーク新規追加
-          </Link>
-        </div>
+        {showAddButton && (
+          <div className="flex justify-center mb-6">
+            <Link
+              href={newBookmarkHref}
+              className="inline-block rounded bg-accent px-8 py-2.5 text-sm font-bold text-white hover:opacity-90 transition-opacity"
+            >
+              ブックマーク新規追加
+            </Link>
+          </div>
+        )}
 
         {/* フィルター */}
         <div className="flex items-center gap-3 mb-8">

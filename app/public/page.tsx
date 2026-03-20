@@ -28,6 +28,7 @@ export default function PublicPage() {
       bookmarks={bookmarks}
       isLoading={isLoading}
       pageTitle="ブックマーク一覧"
+      showAddButton={false}
     />
   )
 }

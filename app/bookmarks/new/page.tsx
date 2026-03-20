@@ -21,7 +21,7 @@ export default function BookmarkNewPage() {
     fetchUser()
   }, [])
 
-  const handleSubmit = async ({ url, comment, isFavorite, isPublic }: FormValues) => {
+  const handleSubmit = async ({ url, comment, isFavorite, isPublic, categoryIds, tagIds }: FormValues) => {
     setError(null)
 
     if (!supabaseUser) {
@@ -43,8 +43,8 @@ export default function BookmarkNewPage() {
           comment,
           isFavorite,
           publishStatus: isPublic ? 'PUBLISHED' : 'DRAFT',
-          categoryIds: [],
-          tagIds: [],
+          categoryIds,
+          tagIds,
         }),
       })
 

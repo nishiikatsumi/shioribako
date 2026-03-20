@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import TiptapEditor from '@/app/_components/TiptapEditor'
+import CategoryManagerDialog from '@/app/_components/CategoryManagerDialog'
+import TagManagerDialog from '@/app/_components/TagManagerDialog'
 
 export type SupabaseUser = {
   id: string
@@ -14,6 +16,8 @@ export type FormValues = {
   comment: string
   isFavorite: boolean
   isPublic: boolean
+  categoryIds: string[]
+  tagIds: string[]
 }
 
 type Props = {
@@ -23,6 +27,8 @@ type Props = {
   initialComment?: string
   initialIsFavorite?: boolean
   initialIsPublic?: boolean
+  initialCategoryIds?: string[]
+  initialTagIds?: string[]
   createdAt?: string
   onSubmit: (values: FormValues) => Promise<void>
   onDelete?: () => Promise<void>
@@ -56,6 +62,8 @@ export default function BookmarkForm({
   initialComment = '',
   initialIsFavorite = false,
   initialIsPublic = false,
+  initialCategoryIds = [],
+  initialTagIds = [],
   createdAt,
   onSubmit,
   onDelete,
@@ -71,10 +79,15 @@ export default function BookmarkForm({
   const [comment, setComment] = useState(initialComment)
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite)
   const [isPublic, setIsPublic] = useState(initialIsPublic)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(initialCategoryIds[0] ?? '')
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialTagIds)
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
+  const [isTagDialogOpen, setIsTagDialogOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const handleSubmit = () => {
-    onSubmit({ url, comment, isFavorite, isPublic })
+    const categoryIds = selectedCategoryId ? [selectedCategoryId] : []
+    onSubmit({ url, comment, isFavorite, isPublic, categoryIds, tagIds: selectedTagIds })
   }
 
   const handleDeleteConfirm = async () => {
@@ -161,6 +174,7 @@ export default function BookmarkForm({
               </div>
               <button
                 type="button"
+                onClick={() => setIsCategoryDialogOpen(true)}
                 className="shrink-0 rounded-xl border border-accent px-4 py-2 text-sm font-semibold text-accent hover:bg-accent hover:text-white transition-all"
               >
                 カテゴリー編集
@@ -180,6 +194,7 @@ export default function BookmarkForm({
               </div>
               <button
                 type="button"
+                onClick={() => setIsTagDialogOpen(true)}
                 className="shrink-0 rounded-xl border border-accent px-4 py-2 text-sm font-semibold text-accent hover:bg-accent hover:text-white transition-all"
               >
                 タグ編集
@@ -293,6 +308,24 @@ export default function BookmarkForm({
 
         </div>
       </main>
+
+      {/* カテゴリー管理ダイアログ */}
+      <CategoryManagerDialog
+        isOpen={isCategoryDialogOpen}
+        onClose={() => setIsCategoryDialogOpen(false)}
+        selectedCategory={selectedCategoryId}
+        onSelectCategory={setSelectedCategoryId}
+        fallbackCategories={[]}
+      />
+
+      {/* タグ管理ダイアログ */}
+      <TagManagerDialog
+        isOpen={isTagDialogOpen}
+        onClose={() => setIsTagDialogOpen(false)}
+        selectedTags={selectedTagIds}
+        onSelectTags={setSelectedTagIds}
+        fallbackTags={[]}
+      />
 
       {/* 削除確認モーダル（editモードのみ） */}
       {mode === 'edit' && showDeleteConfirm && (

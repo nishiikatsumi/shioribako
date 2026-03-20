@@ -17,6 +17,8 @@ type Bookmark = {
     userName: string
     thumbnailKey: string | null
   }
+  postCategories: { category: { id: string; name: string } }[]
+  postTags: { tag: { id: string; name: string } }[]
 }
 
 export default function BookmarkEditPage() {
@@ -53,7 +55,7 @@ export default function BookmarkEditPage() {
     fetchData()
   }, [id])
 
-  const handleUpdate = async ({ url, comment, isFavorite, isPublic }: FormValues) => {
+  const handleUpdate = async ({ url, comment, isFavorite, isPublic, categoryIds, tagIds }: FormValues) => {
     setError(null)
 
     if (!supabaseUser) {
@@ -75,8 +77,8 @@ export default function BookmarkEditPage() {
           comment,
           isFavorite,
           publishStatus: isPublic ? 'PUBLISHED' : 'DRAFT',
-          categoryIds: [],
-          tagIds: [],
+          categoryIds,
+          tagIds,
         }),
       })
 
@@ -136,6 +138,8 @@ export default function BookmarkEditPage() {
       initialComment={bookmark?.comment ?? ''}
       initialIsFavorite={bookmark?.isFavorite}
       initialIsPublic={bookmark?.publishStatus === 'PUBLISHED'}
+      initialCategoryIds={bookmark?.postCategories.map(pc => pc.category.id) ?? []}
+      initialTagIds={bookmark?.postTags.map(pt => pt.tag.id) ?? []}
       createdAt={bookmark?.createdAt}
       onSubmit={handleUpdate}
       onDelete={handleDelete}

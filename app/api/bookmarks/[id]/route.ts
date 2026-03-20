@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/app/_libs/prisma'
 import { PublishStatus } from '@/app/generated/prisma/enums'
-import { getAuthenticatedUser, unauthorizedResponse, validateBookmarkUrl, validateComment } from '@/app/_libs/auth'
+import { getAuthenticatedUser, getOrCreateUserInfo, unauthorizedResponse, validateBookmarkUrl, validateComment } from '@/app/_libs/auth'
 
 export const GET = async (
   request: NextRequest,
@@ -31,11 +31,9 @@ export const GET = async (
     }
 
     // 所有者チェック: 自分のブックマークか、公開ブックマークのみ閲覧可
-    const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId: user.id },
-    })
+    const userInfo = await getOrCreateUserInfo(user)
 
-    if (bookmark.userId !== userInfo?.id && bookmark.publishStatus !== PublishStatus.PUBLISHED) {
+    if (bookmark.userId !== userInfo.id && bookmark.publishStatus !== PublishStatus.PUBLISHED) {
       return NextResponse.json(
         { error: 'このブックマークを閲覧する権限がありません' },
         { status: 403 }
@@ -94,17 +92,8 @@ export const PUT = async (
       return NextResponse.json({ error: commentError }, { status: 400 })
     }
 
-    // トークンからユーザーを取得（リクエストボディの supabaseId を信頼しない）
-    const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId: user.id },
-    })
-
-    if (!userInfo) {
-      return NextResponse.json(
-        { error: 'ユーザーが見つかりません' },
-        { status: 404 }
-      )
-    }
+    // トークンからユーザーを取得（未作成なら自動作成）
+    const userInfo = await getOrCreateUserInfo(user)
 
     // 対象ブックマークの存在確認 & 所有者チェック
     const existing = await getPrisma().bookmark.findUnique({
@@ -181,17 +170,8 @@ export const DELETE = async (
     const user = await getAuthenticatedUser(request)
     if (!user) return unauthorizedResponse()
 
-    // トークンからユーザーを取得
-    const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId: user.id },
-    })
-
-    if (!userInfo) {
-      return NextResponse.json(
-        { error: 'ユーザーが見つかりません' },
-        { status: 404 }
-      )
-    }
+    // トークンからユーザーを取得（未作成なら自動作成）
+    const userInfo = await getOrCreateUserInfo(user)
 
     // 対象ブックマークの存在確認 & 所有者チェック
     const existing = await getPrisma().bookmark.findUnique({

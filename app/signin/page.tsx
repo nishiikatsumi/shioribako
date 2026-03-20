@@ -17,7 +17,7 @@ export default function SigninPage() {
     setIsSubmitting(true);
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -25,6 +25,19 @@ export default function SigninPage() {
       if (signInError) {
         setError('メールアドレスまたはパスワードが正しくありません');
       } else {
+        // userInformation が未作成の場合は自動作成（メール確認後の初回ログイン時）
+        if (data.session) {
+          const userName = email.split('@')[0];
+          await fetch('/api/users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${data.session.access_token}`,
+            },
+            body: JSON.stringify({ userName }),
+          });
+          // POST /api/users は既存ユーザーならそのまま返すので、エラーハンドリング不要
+        }
         router.push('/bookmarks');
       }
     } catch {

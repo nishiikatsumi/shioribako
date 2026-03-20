@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/app/_libs/prisma'
-import { getAuthenticatedUser, unauthorizedResponse, validateName } from '@/app/_libs/auth'
+import { getAuthenticatedUser, getOrCreateUserInfo, unauthorizedResponse, validateName } from '@/app/_libs/auth'
 
 export const GET = async (request: NextRequest) => {
   try {
@@ -8,17 +8,8 @@ export const GET = async (request: NextRequest) => {
     const user = await getAuthenticatedUser(request)
     if (!user) return unauthorizedResponse()
 
-    // トークンからユーザーを取得
-    const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId: user.id },
-    })
-
-    if (!userInfo) {
-      return NextResponse.json(
-        { error: 'ユーザーが見つかりません' },
-        { status: 404 }
-      )
-    }
+    // トークンからユーザーを取得（未作成なら自動作成）
+    const userInfo = await getOrCreateUserInfo(user)
 
     const tags = await getPrisma().tag.findMany({
       where: { userId: userInfo.id },
@@ -50,17 +41,8 @@ export const POST = async (request: NextRequest) => {
       return NextResponse.json({ error: nameError }, { status: 400 })
     }
 
-    // トークンからユーザーを取得
-    const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId: user.id },
-    })
-
-    if (!userInfo) {
-      return NextResponse.json(
-        { error: 'ユーザーが見つかりません' },
-        { status: 404 }
-      )
-    }
+    // トークンからユーザーを取得（未作成なら自動作成）
+    const userInfo = await getOrCreateUserInfo(user)
 
     // 同名タグの重複チェック
     const existing = await getPrisma().tag.findFirst({

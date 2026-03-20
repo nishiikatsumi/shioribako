@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/app/_libs/prisma'
-import { getAuthenticatedUser, unauthorizedResponse, validateName } from '@/app/_libs/auth'
+import { getAuthenticatedUser, getOrCreateUserInfo, unauthorizedResponse, validateName } from '@/app/_libs/auth'
 
 export const GET = async (
   request: NextRequest,
@@ -26,11 +26,9 @@ export const GET = async (
     }
 
     // 所有者チェック
-    const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId: user.id },
-    })
+    const userInfo = await getOrCreateUserInfo(user)
 
-    if (category.userId !== userInfo?.id) {
+    if (category.userId !== userInfo.id) {
       return NextResponse.json(
         { error: 'このカテゴリーを閲覧する権限がありません' },
         { status: 403 }
@@ -67,17 +65,8 @@ export const PUT = async (
       return NextResponse.json({ error: nameError }, { status: 400 })
     }
 
-    // トークンからユーザーを取得
-    const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId: user.id },
-    })
-
-    if (!userInfo) {
-      return NextResponse.json(
-        { error: 'ユーザーが見つかりません' },
-        { status: 404 }
-      )
-    }
+    // トークンからユーザーを取得（未作成なら自動作成）
+    const userInfo = await getOrCreateUserInfo(user)
 
     // 対象カテゴリーの存在確認 & 所有者チェック
     const existing = await getPrisma().category.findUnique({
@@ -137,17 +126,8 @@ export const DELETE = async (
     const user = await getAuthenticatedUser(request)
     if (!user) return unauthorizedResponse()
 
-    // トークンからユーザーを取得
-    const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId: user.id },
-    })
-
-    if (!userInfo) {
-      return NextResponse.json(
-        { error: 'ユーザーが見つかりません' },
-        { status: 404 }
-      )
-    }
+    // トークンからユーザーを取得（未作成なら自動作成）
+    const userInfo = await getOrCreateUserInfo(user)
 
     // 対象カテゴリーの存在確認 & 所有者チェック
     const existing = await getPrisma().category.findUnique({

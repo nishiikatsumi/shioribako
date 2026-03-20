@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/app/_libs/prisma'
 import { PublishStatus } from '@/app/generated/prisma/enums'
-import { getAuthenticatedUser, unauthorizedResponse, validateBookmarkUrl, validateComment } from '@/app/_libs/auth'
+import { getAuthenticatedUser, getOrCreateUserInfo, unauthorizedResponse, validateBookmarkUrl, validateComment } from '@/app/_libs/auth'
 
 export const GET = async (request: NextRequest) => {
   try {
@@ -20,16 +20,8 @@ export const GET = async (request: NextRequest) => {
         )
       }
 
-      const userInfo = await getPrisma().userInformation.findUnique({
-        where: { supabaseId },
-      })
-
-      if (!userInfo) {
-        return NextResponse.json(
-          { error: 'ユーザーが見つかりません' },
-          { status: 404 }
-        )
-      }
+      // トークンからユーザーを取得（未作成なら自動作成）
+      const userInfo = await getOrCreateUserInfo(user)
 
       const bookmarks = await getPrisma().bookmark.findMany({
         where: { userId: userInfo.id },
@@ -100,17 +92,8 @@ export const POST = async (request: NextRequest) => {
       return NextResponse.json({ error: commentError }, { status: 400 })
     }
 
-    // トークンの supabaseId からユーザーを取得（リクエストボディを信頼しない）
-    const userInfo = await getPrisma().userInformation.findUnique({
-      where: { supabaseId: user.id },
-    })
-
-    if (!userInfo) {
-      return NextResponse.json(
-        { error: 'ユーザーが見つかりません' },
-        { status: 404 }
-      )
-    }
+    // トークンからユーザーを取得（未作成なら自動作成）
+    const userInfo = await getOrCreateUserInfo(user)
 
     const bookmark = await getPrisma().bookmark.create({
       data: {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, User } from '@supabase/supabase-js'
+import { getPrisma } from '@/app/_libs/prisma'
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -30,6 +31,22 @@ export function unauthorizedResponse() {
     { error: '認証が必要です' },
     { status: 401 }
   )
+}
+
+// 認証済みユーザーの userInformation を取得。未作成の場合は自動作成する
+export async function getOrCreateUserInfo(user: User) {
+  const existing = await getPrisma().userInformation.findUnique({
+    where: { supabaseId: user.id },
+  })
+  if (existing) return existing
+
+  const userName = user.email?.split('@')[0] ?? 'user'
+  return await getPrisma().userInformation.create({
+    data: {
+      supabaseId: user.id,
+      userName,
+    },
+  })
 }
 
 // URL バリデーション: http/https スキームのみ許可
